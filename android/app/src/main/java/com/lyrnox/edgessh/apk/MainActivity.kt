@@ -117,9 +117,17 @@ class MainActivity : Activity() {
                 cookieManager.getCookie(BACKEND)?.let {
                     if (it.isNotEmpty()) setRequestProperty("Cookie", it)
                 }
+                // 伪装成同源请求，绕过后端 CSRF 校验
+                setRequestProperty("Origin", BACKEND)
+                setRequestProperty("Referer", "$BACKEND/")
+                setRequestProperty("Sec-Fetch-Site", "same-origin")
+                setRequestProperty("Sec-Fetch-Mode", "cors")
                 for ((key, value) in request.requestHeaders) {
                     if (!key.equals("Cookie", ignoreCase = true) &&
-                        !key.equals("Host", ignoreCase = true)) {
+                        !key.equals("Host", ignoreCase = true) &&
+                        !key.equals("Origin", ignoreCase = true) &&
+                        !key.equals("Referer", ignoreCase = true) &&
+                        !key.startsWith("Sec-Fetch", ignoreCase = true)) {
                         setRequestProperty(key, value)
                     }
                 }
