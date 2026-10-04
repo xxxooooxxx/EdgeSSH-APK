@@ -1,0 +1,15 @@
+name = "edgessh-preview"
+main = "src/preview-worker.ts"
+compatibility_date = "2026-07-01"
+workers_dev = true
+preview_urls = false
+
+# 部署脚本填入实际预览域名，并将 script_name 指向主 Worker。
+# 预览 Worker 不绑定 D1、静态资源、ENCRYPTION_KEY 或主站认证 Secret。
+[vars]
+PREVIEW_ORIGIN = "https://edgessh-preview.example.workers.dev"
+
+[[durable_objects.bindings]]
+name = "SSH_SESSIONS"
+class_name = "SSHSessionDO"
+script_name = "edgessh"

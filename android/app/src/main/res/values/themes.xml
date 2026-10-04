@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.EdgeSSH" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#f1f5fb</item>
+        <item name="android:statusBarColor">#f1f5fb</item>
+        <item name="android:navigationBarColor">#f1f5fb</item>
+    </style>
+</resources>

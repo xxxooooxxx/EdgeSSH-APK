@@ -1,0 +1,30 @@
+/* 只作用于橙色独立文件页，终端内表格继续使用原有样式。 */
+.files-page .file-table-wrap:has(.files-list) { overflow: hidden; }
+.files-list { height: 100%; min-height: 0; display: flex; flex-direction: column; color: var(--home-ink); font: 12px var(--home-mono); }
+.files-list-columns { display: grid; grid-template-columns: minmax(0, 3.2fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.8fr) repeat(3, minmax(0, .85fr)); align-items: center; height: 100%; }
+.files-list-columns > span { min-width: 0; padding-inline: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-list-header { flex: 0 0 42px; height: 42px; border-bottom: 1px solid var(--home-line); background: var(--home-bg); color: var(--home-muted); font: 500 12px var(--home-font); }
+.files-list-viewport { flex: 1; min-height: 0; }
+.files-list-viewport [role='tree'] { outline: none; }
+.files-list-row { cursor: pointer; border-bottom: 1px solid var(--home-line); }
+.files-list-row:hover { background: var(--home-bg); }
+.files-list-row.is-selected { background: var(--home-accent-soft); }
+.files-list-viewport:focus-within .files-list-row:focus { outline: 2px solid var(--home-accent-hover); outline-offset: -2px; }
+.files-list-viewport [role='tree']:focus-visible { outline: 2px solid var(--home-accent-hover); outline-offset: -2px; }
+.files-list-name { display: flex; align-items: center; gap: 10px; font-weight: 500; }
+.files-list-name > span { overflow: hidden; text-overflow: ellipsis; }
+.files-list-meta { color: var(--home-muted); font-variant-numeric: tabular-nums; }
+.files-list-icon { flex: 0 0 21px; width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; color: var(--home-muted); }
+.files-list-icon.is-folder { color: var(--home-accent-hover); fill: var(--home-accent-soft); }
+.files-list-icon.is-archive { color: var(--home-accent-hover); }
+@media (max-width: 1100px) {
+  .files-list-columns { grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.8fr); }
+  .files-list-columns > :is(.column-3, .column-4, .column-5) { display: none; }
+}
+@media (max-width: 600px) {
+  .files-list-columns { grid-template-columns: minmax(0, 1fr) 72px 104px; }
+  .files-list-columns > .column-1 { display: none; }
+  .files-list-columns > span { padding-inline: 8px; }
+  .files-list-name { gap: 7px; }
+  .files-list-meta { font-size: 11px; }
+}
