@@ -3,7 +3,6 @@ package com.lyrnox.edgessh.apk
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
-import android.util.Log
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
@@ -12,18 +11,15 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import java.io.ByteArrayInputStream
 import java.io.InputStream
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * EdgeSSH 网站的 Android 打包版：
  *
  * - 前端代码（HTML/CSS/JS）构建自仓库源码，打包在 APK 的 assets/web/ 里。
- * - WebView 加载 https://ssh.lyrnox.com/，但所有页面资源拦截后走本地 assets，
- *   只有 /api/ 开头的请求代理到真实后端。前端看到的 origin 就是真实域名，
- *   origin 校验、WebSocket 直连后端，无需任何 hack。
+ * - WebView 加载 https://ssh.lyrnox.com/，页面静态资源拦截后走本地 assets，
+ *   /api/ 和 WebSocket 放行给 WebView 原生请求（浏览器自带正确的
+ *   Origin/Cookie/Sec-Fetch 头，后端 CSRF 不会拦）。
  * - 服务器数据来自真实后端 D1，打开即与网站一致。
  * - Cloudflare Access 登录在 WebView 内完成，Cookie 持久保存。
  */
@@ -63,11 +59,10 @@ class MainActivity : Activity() {
                     val url = request?.url ?: return null
                     if (url.host != "ssh.lyrnox.com") return null
                     val path = url.path.orEmpty()
-                    return if (path.startsWith("/api/")) {
-                        proxyApi(request)
-                    } else {
-                        serveLocal(path)
-                    }
+                    // 只拦截页面静态资源走本地；/api/ 放行给 WebView 原生请求，
+                    // 浏览器自己带 Origin/Cookie/Sec-Fetch 头，后端 CSRF 不会拦。
+                    // WebSocket 也不拦截，直连后端。
+                    return if (path.startsWith("/api/")) null else serveLocal(path)
                 }
 
                 override fun shouldOverrideUrlLoading(
@@ -103,57 +98,6 @@ class MainActivity : Activity() {
             null
         }
     }
-
-    /** /api/ 开头的请求代理到真实后端，带上 Access Cookie；未登录则跳登录页 */
-    private fun proxyApi(request: WebResourceRequest): WebResourceResponse? {
-        return try {
-            val path = request.url.path.orEmpty()
-            val query = if (request.url.query.isNullOrEmpty()) "" else "?${request.url.query}"
-            val conn = (URL("$BACKEND$path$query").openConnection() as HttpURLConnection).apply {
-                requestMethod = request.method
-                connectTimeout = 15000
-                readTimeout = 30000
-                instanceFollowRedirects = false
-                cookieManager.getCookie(BACKEND)?.let {
-                    if (it.isNotEmpty()) setRequestProperty("Cookie", it)
-                }
-                // 伪装成同源请求，绕过后端 CSRF 校验
-                setRequestProperty("Origin", BACKEND)
-                setRequestProperty("Referer", "$BACKEND/")
-                setRequestProperty("Sec-Fetch-Site", "same-origin")
-                setRequestProperty("Sec-Fetch-Mode", "cors")
-                for ((key, value) in request.requestHeaders) {
-                    if (!key.equals("Cookie", ignoreCase = true) &&
-                        !key.equals("Host", ignoreCase = true) &&
-                        !key.equals("Origin", ignoreCase = true) &&
-                        !key.equals("Referer", ignoreCase = true) &&
-                        !key.startsWith("Sec-Fetch", ignoreCase = true)) {
-                        setRequestProperty(key, value)
-                    }
-                }
-            }
-            val code = conn.responseCode
-            if (code in listOf(301, 302, 303, 307, 308)) {
-                val loc = conn.getHeaderField("Location").orEmpty()
-                if (loc.contains("cloudflareaccess.com")) {
-                    runOnUiThread { webView.loadUrl(loc) }
-                    return textResponse(401, "Login required")
-                }
-            }
-            conn.headerFields["Set-Cookie"]?.forEach { cookieManager.setCookie(BACKEND, it) }
-            val stream = if (code >= 400) conn.errorStream else conn.inputStream
-            val mime = conn.contentType?.substringBefore(";") ?: "application/octet-stream"
-            WebResourceResponse(mime, "utf-8", code, conn.responseMessage ?: "",
-                emptyMap(), stream ?: ByteArrayInputStream(ByteArray(0)))
-        } catch (e: Exception) {
-            Log.e(TAG, "proxyApi failed", e)
-            null
-        }
-    }
-
-    private fun textResponse(code: Int, text: String): WebResourceResponse =
-        WebResourceResponse("text/plain", "utf-8", code, "",
-            emptyMap(), ByteArrayInputStream(text.toByteArray()))
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
