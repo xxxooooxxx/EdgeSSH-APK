@@ -22,7 +22,7 @@ import java.net.URL
  *
  * - 前端代码（HTML/CSS/JS）构建自仓库源码，打包在 APK 的 assets/web/ 里。
  * - WebView 加载 https://ssh.lyrnox.com/，但所有页面资源拦截后走本地 assets，
- *   只有 /api/* 代理到真实后端。前端看到的 origin 就是真实域名，
+ *   只有 /api/ 开头的请求代理到真实后端。前端看到的 origin 就是真实域名，
  *   origin 校验、WebSocket 直连后端，无需任何 hack。
  * - 服务器数据来自真实后端 D1，打开即与网站一致。
  * - Cloudflare Access 登录在 WebView 内完成，Cookie 持久保存。
@@ -104,7 +104,7 @@ class MainActivity : Activity() {
         }
     }
 
-    /** /api/* 代理到真实后端，带上 Access Cookie；未登录则跳登录页 */
+    /** /api/ 开头的请求代理到真实后端，带上 Access Cookie；未登录则跳登录页 */
     private fun proxyApi(request: WebResourceRequest): WebResourceResponse? {
         return try {
             val path = request.url.path.orEmpty()
