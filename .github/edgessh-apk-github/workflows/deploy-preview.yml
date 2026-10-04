@@ -1,0 +1,14 @@
+name: 部署预览 Worker
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy.yml
+    with:
+      deploy_preview: true
+    secrets: inherit

@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#f1f5fb" />
+    <meta
+      name="description"
+      content="安全的 Cloudflare Workers 原生 WebSSH 终端"
+      data-i18n-content-zh="安全的 Cloudflare Workers 原生 WebSSH 终端"
+      data-i18n-content-en="A secure, native Cloudflare Workers WebSSH terminal"
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>EdgeSSH · Private workspace</title>
+    <script type="module" crossorigin src="/assets/index-DjGARK28.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-tks6Wy0U.css">
+  </head>
+  <body>
+    <div id="app" hidden>
+      <header class="topbar">
+        <div class="brand-group">
+          <button
+            id="panel-toggle"
+            class="icon-button"
+            type="button"
+            aria-label="打开连接面板"
+            data-i18n-aria-label-zh="打开连接面板"
+            data-i18n-aria-label-en="Open connection panel"
+            aria-controls="connection-panel"
+            aria-expanded="false"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
+          <a
+            class="brand"
+            href="/"
+            aria-label="Workers WebSSH 首页"
+            data-i18n-aria-label-zh="Workers WebSSH 首页"
+            data-i18n-aria-label-en="Workers WebSSH home"
+          >
+            <span class="brand-mark" aria-hidden="true">&gt;_</span>
+            <span><strong>Edge</strong>SSH</span>
+          </a>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="language-toggle" class="icon-button" type="button" aria-label="切换到英文" title="切换到英文" data-language="zh-CN">
+            <span class="language-icon" aria-hidden="true"><span>中</span><span>E</span></span>
+          </button>
+          <button
+            id="theme-toggle"
+            class="icon-button"
+            type="button"
+            aria-label="切换颜色主题"
+            data-i18n-aria-label-zh="切换颜色主题"
+            data-i18n-aria-label-en="Toggle color theme"
+          >
+            <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" /></svg>
+          </button>
+          <a
+            class="icon-button"
+            href="https://github.com/cmliu/CF-Workers-WebSSH"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="打开源代码仓库"
+            data-i18n-aria-label-zh="打开源代码仓库"
+            data-i18n-aria-label-en="Open source repository"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.87c-2.78.6-3.37-1.18-3.37-1.18-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.35 1.09 2.92.83.09-.65.35-1.09.64-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0 1 12 6.82c.85 0 1.71.11 2.51.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.86v2.76c0 .27.18.58.69.48A10 10 0 0 0 12 2Z" /></svg>
+          </a>
+        </div>
+      </header>
+
+      <div id="app-shell" class="app-shell">
+        <button
+          id="panel-scrim"
+          class="panel-scrim"
+          type="button"
+          aria-label="关闭连接面板"
+          data-i18n-aria-label-zh="关闭连接面板"
+          data-i18n-aria-label-en="Close connection panel"
+          hidden
+        ></button>
+        <aside
+          id="connection-panel"
+          class="connection-panel"
+          aria-label="连接管理"
+          data-i18n-aria-label-zh="连接管理"
+          data-i18n-aria-label-en="Connection management"
+        >
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow" data-i18n-zh="连接管理" data-i18n-en="CONNECTIONS">连接管理</p>
+              <h1 data-i18n-zh="SSH 工作台" data-i18n-en="SSH workspace">SSH 工作台</h1>
+            </div>
+            <button
+              id="panel-close"
+              class="icon-button panel-close"
+              type="button"
+              aria-label="关闭连接面板"
+              data-i18n-aria-label-zh="关闭连接面板"
+              data-i18n-aria-label-en="Close connection panel"
+            >×</button>
+          </div>
+
+          <section class="profiles-section" aria-labelledby="profiles-title">
+            <div class="section-title-row">
+              <h2 id="profiles-title" data-i18n-zh="云端主机" data-i18n-en="Cloud hosts">云端主机</h2>
+              <span id="profile-count" class="count-badge">0</span>
+            </div>
+            <div id="profile-list" class="profile-list">
+              <p class="empty-list" data-i18n-zh="暂无历史记录" data-i18n-en="No connection history yet.">暂无历史记录</p>
+            </div>
+          </section>
+
+          <form id="connection-form" class="connection-form" autocomplete="off" novalidate>
+            <input id="profile-id" type="hidden" />
+            <div class="field-grid host-grid">
+              <label class="field">
+                <span data-i18n-zh="主机" data-i18n-en="Host">主机</span>
+                <input id="host" name="host" type="text" maxlength="253" placeholder="ssh.example.com" required spellcheck="false" />
+              </label>
+              <label class="field port-field">
+                <span data-i18n-zh="端口" data-i18n-en="Port">端口</span>
+                <input id="port" name="port" type="number" value="22" min="1" max="65535" required inputmode="numeric" />
+              </label>
+            </div>
+
+            <div class="field-grid single">
+              <label class="field">
+                <span data-i18n-zh="用户名" data-i18n-en="Username">用户名</span>
+                <input id="username" name="username" type="text" value="root" maxlength="128" required autocomplete="username" spellcheck="false" />
+              </label>
+            </div>
+
+            <fieldset class="auth-fieldset">
+              <legend data-i18n-zh="身份认证" data-i18n-en="Authentication">身份认证</legend>
+              <div
+                class="segmented-control"
+                role="radiogroup"
+                aria-label="身份认证方式"
+                data-i18n-aria-label-zh="身份认证方式"
+                data-i18n-aria-label-en="Authentication method"
+              >
+                <label><input type="radio" name="authMethod" value="password" checked /><span data-i18n-zh="密码" data-i18n-en="Password">密码</span></label>
+                <label><input type="radio" name="authMethod" value="publickey" /><span data-i18n-zh="SSH 密钥" data-i18n-en="SSH key">SSH 密钥</span></label>
+              </div>
+
+              <div id="password-field" class="field secret-field">
+                <label for="password">
+                  <span data-i18n-zh="密码" data-i18n-en="Password">密码</span>
+                  <small data-i18n-zh="连接成功后使用 AES-GCM 加密保存" data-i18n-en="Encrypted with AES-GCM after a successful connection">连接成功后使用 AES-GCM 加密保存</small>
+                </label>
+                <span class="input-action-wrap">
+                  <input id="password" name="password" type="password" maxlength="4096" autocomplete="current-password" />
+                  <button id="reveal-password" class="input-action" type="button" aria-label="显示密码" aria-pressed="false">
+                    <svg class="reveal-icon reveal-icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    <svg class="reveal-icon reveal-icon-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                      <path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                      <line x1="2" x2="22" y1="2" y2="22" />
+                    </svg>
+                  </button>
+                </span>
+              </div>
+
+              <div id="key-field" class="key-field" hidden>
+                <label class="field">
+                  <span>
+                    <span data-i18n-zh="私钥" data-i18n-en="Private key">私钥</span>
+                    <small data-i18n-zh="未加密 OpenSSH" data-i18n-en="unencrypted OpenSSH">未加密 OpenSSH</small>
+                  </span>
+                  <textarea id="private-key" name="privateKey" rows="5" maxlength="65536" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
+                </label>
+                <label class="file-picker">
+                  <input id="key-file" type="file" accept=".pem,.key,.openssh,text/plain" />
+                  <span data-i18n-zh="选择密钥文件" data-i18n-en="Choose key file">选择密钥文件</span>
+                  <small id="key-file-name">未选择文件</small>
+                </label>
+              </div>
+            </fieldset>
+
+            <details class="advanced-options">
+              <summary data-i18n-zh="高级选项" data-i18n-en="Advanced options">高级选项</summary>
+              <div class="advanced-body">
+                <label class="field">
+                  <span data-i18n-zh="初始命令" data-i18n-en="Initial command">初始命令</span>
+                  <input id="initial-command" name="initialCommand" type="text" maxlength="4096" placeholder="tmux attach || tmux" spellcheck="false" />
+                </label>
+                <div class="field-grid two">
+                  <label class="field">
+                    <span data-i18n-zh="终端类型" data-i18n-en="Terminal">终端类型</span>
+                    <select id="term-type" name="termType">
+                      <option value="xterm-256color">xterm-256color</option>
+                      <option value="xterm">xterm</option>
+                      <option value="screen-256color">screen-256color</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span data-i18n-zh="字符编码" data-i18n-en="Encoding">字符编码</span>
+                    <select id="encoding" name="encoding">
+                      <option value="utf-8">UTF-8</option>
+                      <option value="gb18030">GB18030</option>
+                      <option value="big5">Big5</option>
+                    </select>
+                  </label>
+                </div>
+                <label class="field">
+                  <span>
+                    <span data-i18n-zh="预期主机指纹" data-i18n-en="Expected host fingerprint">预期主机指纹</span>
+                    <small>SHA-256</small>
+                  </span>
+                  <input
+                    id="fingerprint"
+                    name="fingerprint"
+                    type="text"
+                    maxlength="128"
+                    placeholder="首次使用后自动保存"
+                    data-i18n-placeholder-zh="首次使用后自动保存"
+                    data-i18n-placeholder-en="Saved after first use"
+                    spellcheck="false"
+                  />
+                </label>
+              </div>
+            </details>
+
+            <div id="form-error" class="form-error" role="alert" hidden></div>
+            <div class="form-actions">
+              <button id="connect-button" class="primary-button" type="submit">
+                <span class="button-icon" aria-hidden="true">&gt;_</span>
+                <span>连接</span>
+              </button>
+              <button
+                id="share-link"
+                class="icon-button bordered"
+                type="button"
+                aria-label="复制连接链接（不含凭据）"
+                data-i18n-aria-label-zh="复制连接链接（不含凭据）"
+                data-i18n-aria-label-en="Copy connection link (without credentials)"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+              </button>
+            </div>
+          </form>
+
+          <p
+            class="privacy-note"
+            data-i18n-zh="成功连接后，主机资料、密码或私钥会使用 Worker 密钥加密并保存至 D1。浏览器不持久化凭据。"
+            data-i18n-en="Successful connections save host details and credentials encrypted in D1. Credentials are not persisted in the browser."
+          >成功连接后，主机资料、密码或私钥会使用 Worker 密钥加密并保存至 D1。浏览器不持久化凭据。</p>
+        </aside>
+
+        <main class="workspace">
+          <section id="terminal-card" class="terminal-card">
+            <div class="terminal-pane">
+              <div class="terminal-toolbar">
+                <div
+                  class="session-target"
+                  aria-label="实时连接状态"
+                  data-i18n-aria-label-zh="实时连接状态"
+                  data-i18n-aria-label-en="Live connection status"
+                >
+                  <span class="live-orb idle" id="live-orb" role="status" aria-live="polite" aria-atomic="true" title="离线">
+                    <span id="live-orb-label" class="sr-only">离线</span>
+                  </span>
+                  <div>
+                    <strong id="session-title">无活动会话</strong>
+                    <span id="session-subtitle">选择目标并连接</span>
+                  </div>
+                </div>
+                <div class="resource-metrics" aria-label="系统资源" data-i18n-aria-label-zh="系统资源" data-i18n-aria-label-en="System resources">
+                  <div class="resource-metric resource-cpu">
+                    <div class="resource-metric-line">
+                      <span data-i18n-zh="CPU" data-i18n-en="CPU">CPU</span>
+                      <strong id="resource-cpu-value" class="resource-percentage">--</strong>
+                      <strong id="resource-cpu-load" class="resource-detail">-- / -- / --</strong>
+                    </div>
+                    <progress id="resource-cpu-progress" max="100" value="0" aria-label="CPU 使用率" data-i18n-aria-label-zh="CPU 使用率" data-i18n-aria-label-en="CPU usage"></progress>
+                  </div>
+                  <div class="resource-metric resource-memory">
+                    <div class="resource-metric-line">
+                      <span data-i18n-zh="内存" data-i18n-en="MEM">内存</span>
+                      <strong id="resource-memory-value" class="resource-percentage">--</strong>
+                      <strong id="resource-memory-amount" class="resource-detail">--/--</strong>
+                    </div>
+                    <progress id="resource-memory-progress" max="100" value="0" aria-label="内存使用率" data-i18n-aria-label-zh="内存使用率" data-i18n-aria-label-en="Memory usage"></progress>
+                  </div>
+                  <div class="resource-metric resource-swap">
+                    <div class="resource-metric-line">
+                      <span data-i18n-zh="Swap" data-i18n-en="SWAP">Swap</span>
+                      <strong id="resource-swap-value" class="resource-percentage">--</strong>
+                      <strong id="resource-swap-amount" class="resource-detail">--/--</strong>
+                    </div>
+                    <progress id="resource-swap-progress" max="100" value="0" aria-label="Swap 使用率" data-i18n-aria-label-zh="Swap 使用率" data-i18n-aria-label-en="Swap usage"></progress>
+                  </div>
+                  <div class="resource-metric resource-network" id="resource-network" hidden>
+                    <div class="resource-metric-line">
+                      <strong id="resource-network-iface" class="resource-detail">-</strong>
+                      <select id="resource-network-select" class="resource-network-select" hidden aria-label="网卡选择" data-i18n-aria-label-zh="网卡选择" data-i18n-aria-label-en="Network interface"></select>
+                      <div class="resource-network-rates">
+                        <strong id="resource-network-rate-up">↑ 0 B/s</strong>
+                        <strong id="resource-network-rate-down">↓ 0 B/s</strong>
+                      </div>
+                    </div>
+                    <canvas id="resource-network-sparkline" class="resource-sparkline" width="184" height="12" aria-label="网络速率" data-i18n-aria-label-zh="网络速率" data-i18n-aria-label-en="Network rate"></canvas>
+                  </div>
+                </div>
+                <div class="session-metrics">
+                  <div><span data-i18n-zh="时长" data-i18n-en="UPTIME">时长</span><strong id="metric-uptime">00:00</strong></div>
+                  <div><span data-i18n-zh="主机密钥" data-i18n-en="HOST KEY">主机密钥</span><strong id="metric-host-key">--</strong></div>
+                </div>
+                <div class="terminal-actions">
+                  <button id="clear-terminal" class="toolbar-button" type="button" aria-label="清屏" data-i18n-aria-label-zh="清屏" data-i18n-aria-label-en="Clear">
+                    <svg class="toolbar-button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M3 6h18" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      <line x1="10" x2="10" y1="11" y2="17" />
+                      <line x1="14" x2="14" y1="11" y2="17" />
+                    </svg>
+                    <span class="button-label" data-i18n-zh="清屏" data-i18n-en="Clear">清屏</span>
+                  </button>
+                  <button id="fullscreen-terminal" class="toolbar-button" type="button" aria-label="全屏" data-i18n-aria-label-zh="全屏" data-i18n-aria-label-en="Fullscreen">
+                    <svg class="toolbar-button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                      <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                      <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                      <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                    </svg>
+                    <span class="button-label" data-i18n-zh="全屏" data-i18n-en="Fullscreen">全屏</span>
+                  </button>
+                </div>
+              </div>
+              <div id="terminal-stage" class="terminal-stage">
+                <div
+                  id="terminal"
+                  role="application"
+                  aria-label="SSH 终端"
+                  data-i18n-aria-label-zh="SSH 终端"
+                  data-i18n-aria-label-en="SSH terminal"
+                ></div>
+                <div id="terminal-empty" class="terminal-empty">
+                  <div class="empty-glyph" aria-hidden="true">&gt;_</div>
+                  <h2 data-i18n-zh="终端已就绪" data-i18n-en="Your terminal is ready">终端已就绪</h2>
+                  <p
+                    data-i18n-zh="从连接面板建立 SSH 连接，开始加密的边缘会话。"
+                    data-i18n-en="Open an SSH connection from the panel to start an encrypted edge session."
+                  >从连接面板建立 SSH 连接，开始加密的边缘会话。</p>
+                  <button id="empty-connect" class="small-button" type="button" data-i18n-zh="配置连接" data-i18n-en="Configure connection">配置连接</button>
+                </div>
+              </div>
+
+              <div id="terminal-tools" class="terminal-tools">
+                <div class="terminal-keybar">
+                  <div class="terminal-key-scroll" role="toolbar" aria-label="终端快捷键" data-i18n-aria-label-zh="终端快捷键" data-i18n-aria-label-en="Terminal shortcuts">
+                    <button class="terminal-key terminal-key-fn" type="button" data-terminal-key="esc" aria-label="Esc">Esc</button>
+                    <button class="terminal-key terminal-key-fn" type="button" data-terminal-key="tab" aria-label="Tab">Tab</button>
+                    <button class="terminal-key terminal-key-modifier" type="button" data-terminal-modifier="ctrl" aria-pressed="false" aria-label="Ctrl，下一次输入使用 Ctrl 组合键" data-i18n-aria-label-zh="Ctrl，下一次输入使用 Ctrl 组合键" data-i18n-aria-label-en="Ctrl, apply to the next input">Ctrl</button>
+                    <button class="terminal-key terminal-key-modifier" type="button" data-terminal-modifier="alt" aria-pressed="false" aria-label="Alt，下一次输入使用 Alt 组合键" data-i18n-aria-label-zh="Alt，下一次输入使用 Alt 组合键" data-i18n-aria-label-en="Alt, apply to the next input">Alt</button>
+                    <button class="terminal-key terminal-key-arrow" type="button" data-terminal-key="up" aria-label="上方向键" data-i18n-aria-label-zh="上方向键" data-i18n-aria-label-en="Up arrow">↑</button>
+                    <button class="terminal-key terminal-key-arrow" type="button" data-terminal-key="down" aria-label="下方向键" data-i18n-aria-label-zh="下方向键" data-i18n-aria-label-en="Down arrow">↓</button>
+                    <button class="terminal-key terminal-key-arrow" type="button" data-terminal-key="left" aria-label="左方向键" data-i18n-aria-label-zh="左方向键" data-i18n-aria-label-en="Left arrow">←</button>
+                    <button class="terminal-key terminal-key-arrow" type="button" data-terminal-key="right" aria-label="右方向键" data-i18n-aria-label-zh="右方向键" data-i18n-aria-label-en="Right arrow">→</button>
+                    <button class="terminal-key terminal-key-control" type="button" data-terminal-key="ctrl-c" aria-label="Ctrl+C 中断" data-i18n-aria-label-zh="Ctrl+C 中断" data-i18n-aria-label-en="Ctrl+C Interrupt">Ctrl+C</button>
+                    <button class="terminal-key terminal-key-control" type="button" data-terminal-key="ctrl-d" aria-label="Ctrl+D 退出" data-i18n-aria-label-zh="Ctrl+D 退出" data-i18n-aria-label-en="Ctrl+D Exit">Ctrl+D</button>
+                    <button class="terminal-key terminal-key-control" type="button" data-terminal-key="ctrl-z" aria-label="Ctrl+Z 挂起" data-i18n-aria-label-zh="Ctrl+Z 挂起" data-i18n-aria-label-en="Ctrl+Z Suspend">Ctrl+Z</button>
+                    <button class="terminal-key terminal-key-control" type="button" data-terminal-key="ctrl-l" aria-label="Ctrl+L 清屏" data-i18n-aria-label-zh="Ctrl+L 清屏" data-i18n-aria-label-en="Ctrl+L Clear">Ctrl+L</button>
+                  </div>
+                  <button id="command-editor-toggle" class="command-editor-toggle" type="button" aria-controls="command-editor" aria-expanded="true" aria-label="收起命令编辑器" title="命令编辑器" data-i18n-title-zh="命令编辑器" data-i18n-title-en="Command editor">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" /></svg>
+                    <span data-i18n-zh="命令" data-i18n-en="Command">命令</span>
+                  </button>
+                </div>
+
+                <section id="command-editor" class="command-editor" aria-labelledby="command-editor-title">
+                  <header class="command-editor-header">
+                    <strong id="command-editor-title" data-i18n-zh="命令编辑器" data-i18n-en="Command editor">命令编辑器</strong>
+                    <button id="command-editor-close" class="command-editor-close" type="button" aria-label="收起命令编辑器" data-i18n-aria-label-zh="收起命令编辑器" data-i18n-aria-label-en="Collapse command editor" title="收起" data-i18n-title-zh="收起" data-i18n-title-en="Collapse">×</button>
+                  </header>
+                  <textarea id="command-editor-input" rows="5" spellcheck="false" autocomplete="off" placeholder="在这里编辑要发送到终端的命令…" data-i18n-placeholder-zh="在这里编辑要发送到终端的命令…" data-i18n-placeholder-en="Edit commands to send to the terminal…"></textarea>
+                  <footer class="command-editor-actions">
+                    <button id="command-editor-clear" class="command-editor-action" type="button" data-i18n-zh="清空" data-i18n-en="Clear">清空</button>
+                    <button id="command-editor-insert" class="command-editor-action" type="button" disabled data-i18n-zh="插入终端" data-i18n-en="Insert into terminal" title="插入到当前提示符但不执行" data-i18n-title-zh="插入到当前提示符但不执行" data-i18n-title-en="Insert at the current prompt without running">插入终端</button>
+                    <div class="command-send-group">
+                      <button id="command-editor-send" class="command-editor-send" type="button" disabled data-i18n-zh="发送" data-i18n-en="Send">发送</button>
+                      <button id="command-editor-send-menu" class="command-editor-send-menu" type="button" disabled aria-haspopup="menu" aria-expanded="false" aria-controls="command-send-options" aria-label="选择发送方式" data-i18n-aria-label-zh="选择发送方式" data-i18n-aria-label-en="Choose send mode">▾</button>
+                      <div id="command-send-options" class="command-send-options" role="menu" hidden>
+                        <button type="button" role="menuitem" data-command-send="all" data-i18n-zh="发送全部" data-i18n-en="Send all">发送全部</button>
+                        <button type="button" role="menuitem" data-command-send="line" data-i18n-zh="发送当前行" data-i18n-en="Send current line">发送当前行</button>
+                      </div>
+                    </div>
+                  </footer>
+                </section>
+              </div>
+            </div>
+
+            <div class="workspace-dock">
+              <div class="event-bar">
+                <span id="event-message">Worker 运行时待命</span>
+                <div class="dock-tabs" role="tablist" aria-label="工作区面板" data-i18n-aria-label-zh="工作区面板" data-i18n-aria-label-en="Workspace panels">
+                  <button
+                    id="file-manager-tab"
+                    class="dock-tab"
+                    type="button"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="file-manager-panel"
+                    aria-expanded="false"
+                    tabindex="0"
+                    aria-label="文件管理"
+                    data-i18n-aria-label-zh="文件管理"
+                    data-i18n-aria-label-en="Files"
+                  >
+                    <svg class="dock-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5h6l2-2h9a1.5 1.5 0 0 1 1.5 1.5v11a1.5 1.5 0 0 1-1.5 1.5h-17A1.5 1.5 0 0 1 2 18V9a1.5 1.5 0 0 1 1.5-1.5Z" /></svg>
+                    <span class="button-label" data-i18n-zh="文件管理" data-i18n-en="Files">文件管理</span>
+                  </button>
+                  <button
+                    id="process-manager-tab"
+                    class="dock-tab"
+                    type="button"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="process-manager-panel"
+                    aria-expanded="false"
+                    tabindex="-1"
+                    aria-label="进程管理"
+                    data-i18n-aria-label-zh="进程管理"
+                    data-i18n-aria-label-en="Processes"
+                  >
+                    <svg class="dock-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="m7 9 2.5 2.5L7 14M12.5 14H17" /></svg>
+                    <span class="button-label" data-i18n-zh="进程管理" data-i18n-en="Processes">进程管理</span>
+                  </button>
+                  <button
+                    id="event-toggle"
+                    class="dock-tab"
+                    type="button"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="event-log"
+                    aria-expanded="false"
+                    tabindex="-1"
+                    aria-label="会话日志"
+                    data-i18n-aria-label-zh="会话日志"
+                    data-i18n-aria-label-en="Session log"
+                  >
+                    <svg class="dock-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2.5h9l4 4V21H6a2 2 0 0 1-2-2V4.5a2 2 0 0 1 2-2Z" /><path d="M15 2.5V7h4M8 11h7M8 15h7" /></svg>
+                    <span class="button-label" data-i18n-zh="会话日志" data-i18n-en="Session log">会话日志</span>
+                  </button>
+                </div>
+              </div>
+
+              <section id="file-manager-panel" class="file-manager" role="tabpanel" aria-labelledby="file-manager-tab" tabindex="0" hidden>
+                <aside id="file-tree" class="file-tree" aria-label="目录树" data-i18n-aria-label-zh="目录树" data-i18n-aria-label-en="Directory tree">
+                  <div class="file-tree-header">
+                    <span class="file-tree-title" data-i18n-zh="目录" data-i18n-en="Directories">目录</span>
+                    <button id="file-tree-collapse" class="file-tree-collapse icon-button" type="button" aria-label="折叠侧栏" data-i18n-aria-label-zh="折叠侧栏" data-i18n-aria-label-en="Collapse sidebar" title="折叠侧栏" data-i18n-title-zh="折叠侧栏" data-i18n-title-en="Collapse sidebar">&#9776;</button>
+                  </div>
+                  <div id="file-tree-scroller" class="file-tree-scroller"></div>
+                  <div class="file-tree-resize" aria-hidden="true"></div>
+                </aside>
+                <div class="file-toolbar">
+                  <label class="file-path-field" for="file-manager-path">
+                    <span class="sr-only" data-i18n-zh="当前路径" data-i18n-en="Current path">当前路径</span>
+                    <input id="file-manager-path" type="text" value="/" autocomplete="off" spellcheck="false" aria-label="当前路径" data-i18n-aria-label-zh="当前路径" data-i18n-aria-label-en="Current path" />
+                  </label>
+                  <div class="file-actions" aria-label="文件操作" data-i18n-aria-label-zh="文件操作" data-i18n-aria-label-en="File actions">
+                    <button id="file-back" class="file-action" type="button" disabled data-i18n-aria-label-zh="返回" data-i18n-aria-label-en="Back" aria-label="返回" title="返回" data-i18n-title-zh="返回" data-i18n-title-en="Back">&#8592;</button>
+                    <button id="file-up" class="file-action" type="button" disabled data-i18n-aria-label-zh="上一级" data-i18n-aria-label-en="Up one level" aria-label="上一级" title="上一级" data-i18n-title-zh="上一级" data-i18n-title-en="Up one level">&#8593;</button>
+                    <button id="file-home" class="file-action" type="button" disabled data-i18n-aria-label-zh="主目录" data-i18n-aria-label-en="Home" aria-label="主目录" title="主目录" data-i18n-title-zh="主目录" data-i18n-title-en="Home">&#8962;</button>
+                    <button id="file-refresh" class="file-action" type="button" disabled data-i18n-aria-label-zh="刷新" data-i18n-aria-label-en="Refresh" aria-label="刷新" title="刷新" data-i18n-title-zh="刷新" data-i18n-title-en="Refresh">&#8635;</button>
+                    <span class="file-action-separator" aria-hidden="true"></span>
+                    <button id="file-upload" class="file-action file-action-wide" type="button" disabled data-i18n-zh="上传" data-i18n-en="Upload">上传</button>
+                    <button id="file-download" class="file-action file-action-wide" type="button" disabled data-i18n-zh="下载" data-i18n-en="Download">下载</button>
+                    <button id="file-mkdir" class="file-action file-action-wide" type="button" disabled data-i18n-zh="新建文件夹" data-i18n-en="New folder">新建文件夹</button>
+                    <button id="file-rename" class="file-action file-action-wide" type="button" disabled data-i18n-zh="重命名" data-i18n-en="Rename">重命名</button>
+                    <button id="file-delete" class="file-action file-action-wide danger" type="button" disabled data-i18n-zh="删除" data-i18n-en="Delete">删除</button>
+                    <input id="file-upload-input" class="sr-only" type="file" tabindex="-1" />
+                  </div>
+                  <div class="file-view-controls">
+                    <button id="fullscreen-files" class="file-action" type="button" disabled aria-label="放大文件管理" title="放大文件管理" data-i18n-aria-label-zh="放大文件管理" data-i18n-aria-label-en="Expand file manager" data-i18n-title-zh="放大文件管理" data-i18n-title-en="Expand file manager"></button>
+                    <button id="exit-fullscreen-files" class="file-action" type="button" aria-label="退出全屏" title="退出全屏" data-i18n-aria-label-zh="退出全屏" data-i18n-aria-label-en="Exit fullscreen" data-i18n-title-zh="退出全屏" data-i18n-title-en="Exit fullscreen"></button>
+                  </div>
+                </div>
+
+                <div class="file-table-wrap">
+                  <table class="file-table" aria-describedby="file-manager-status">
+                    <thead>
+                      <tr>
+                        <th scope="col" data-i18n-zh="名称" data-i18n-en="Name">名称</th>
+                        <th scope="col" data-column="size" data-i18n-zh="大小" data-i18n-en="Size">大小</th>
+                        <th scope="col" data-column="type" data-i18n-zh="类型" data-i18n-en="Type">类型</th>
+                        <th scope="col" data-column="mtime" data-i18n-zh="修改时间" data-i18n-en="Modified">修改时间</th>
+                        <th scope="col" data-column="permissions" data-i18n-zh="权限" data-i18n-en="Permissions">权限</th>
+                        <th scope="col" data-column="owner" data-i18n-zh="用户" data-i18n-en="Owner">用户</th>
+                        <th scope="col" data-column="group" data-i18n-zh="组" data-i18n-en="Group">组</th>
+                      </tr>
+                    </thead>
+                    <tbody id="file-table-body"></tbody>
+                  </table>
+                  <div id="file-manager-loading" class="file-manager-state" role="status" hidden>
+                    <span class="file-spinner" aria-hidden="true"></span>
+                    <span data-i18n-zh="正在读取目录…" data-i18n-en="Loading directory…">正在读取目录…</span>
+                  </div>
+                  <div id="file-manager-empty" class="file-manager-state" hidden data-i18n-zh="此目录为空" data-i18n-en="This folder is empty">此目录为空</div>
+                  <div id="file-manager-error" class="file-manager-state error" role="alert" hidden></div>
+                </div>
+                <div class="file-statusbar">
+                  <span id="file-manager-status" role="status" aria-live="polite" data-i18n-zh="连接 SSH 后即可管理文件" data-i18n-en="Connect to SSH to manage files">连接 SSH 后即可管理文件</span>
+                  <div id="file-manager-progress" class="file-progress" hidden>
+                    <span id="file-manager-progress-label"></span>
+                    <progress id="file-manager-progress-bar" max="100" value="0" aria-labelledby="file-manager-progress-label"></progress>
+                    <button
+                      id="file-manager-progress-cancel"
+                      class="file-progress-cancel"
+                      type="button"
+                      data-i18n-zh="取消"
+                      data-i18n-en="Cancel"
+                      data-i18n-aria-label-zh="取消文件传输"
+                      data-i18n-aria-label-en="Cancel file transfer"
+                      aria-label="取消文件传输"
+                    >取消</button>
+                  </div>
+                </div>
+              </section>
+              <section id="process-manager-panel" class="process-manager" role="tabpanel" aria-labelledby="process-manager-tab" tabindex="0" hidden>
+                <div class="process-table-wrap">
+                  <table class="process-table" aria-describedby="process-manager-status">
+                    <thead>
+                      <tr>
+                        <th scope="col" aria-sort="none"><button class="process-sort" type="button" data-process-sort="pid" data-i18n-zh="PID" data-i18n-en="PID">PID</button></th>
+                        <th scope="col" aria-sort="none"><button class="process-sort" type="button" data-process-sort="user" data-i18n-zh="用户" data-i18n-en="User">用户</button></th>
+                        <th scope="col" aria-sort="none"><button class="process-sort" type="button" data-process-sort="memoryBytes" data-i18n-zh="内存" data-i18n-en="Memory">内存</button></th>
+                        <th scope="col" aria-sort="none"><button class="process-sort" type="button" data-process-sort="memoryPercent" data-i18n-zh="MEM%" data-i18n-en="MEM%">MEM%</button></th>
+                        <th scope="col" aria-sort="descending"><button class="process-sort" type="button" data-process-sort="cpuPercent" data-i18n-zh="CPU%" data-i18n-en="CPU%">CPU%</button></th>
+                        <th scope="col" aria-sort="none"><button class="process-sort" type="button" data-process-sort="state" data-i18n-zh="状态" data-i18n-en="State">状态</button></th>
+                        <th scope="col" aria-sort="none"><button class="process-sort" type="button" data-process-sort="time" data-i18n-zh="时间" data-i18n-en="Time">时间</button></th>
+                        <th scope="col" aria-sort="none"><button class="process-sort" type="button" data-process-sort="command" data-i18n-zh="名称/命令行" data-i18n-en="Name / command">名称/命令行</button></th>
+                        <th scope="col" class="process-kill-column" data-i18n-zh="操作" data-i18n-en="Actions">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody id="process-table-body"></tbody>
+                  </table>
+                  <div id="process-manager-empty" class="process-manager-state" hidden data-i18n-zh="没有可显示的进程" data-i18n-en="No processes to display">没有可显示的进程</div>
+                  <div id="process-manager-error" class="process-manager-state error" role="alert" hidden></div>
+                </div>
+                <div class="process-statusbar">
+                  <span id="process-manager-status" role="status" aria-live="polite" data-i18n-zh="连接 SSH 后即可查看实时进程" data-i18n-en="Connect to SSH to view live processes">连接 SSH 后即可查看实时进程</span>
+                  <span><span data-i18n-zh="最后更新" data-i18n-en="Last update">最后更新</span> <strong id="process-updated">--</strong></span>
+                </div>
+              </section>
+              <div id="event-log" class="event-log" role="tabpanel" aria-labelledby="event-toggle" tabindex="0" hidden aria-live="polite"></div>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <div id="toast-region" class="toast-region" aria-live="polite"></div>
+
+      <dialog id="host-key-dialog" class="host-key-dialog" aria-labelledby="host-key-title">
+        <form method="dialog">
+          <span id="host-key-icon" class="dialog-icon" aria-hidden="true">密钥</span>
+          <div>
+            <p id="host-key-eyebrow" class="eyebrow">主机身份</p>
+            <h2 id="host-key-title">信任此 SSH 主机？</h2>
+            <p id="host-key-description">服务器提供了尚未为此目标固定的密钥。继续前，请通过可信渠道核验。</p>
+          </div>
+          <dl>
+            <div><dt data-i18n-zh="目标" data-i18n-en="Target">目标</dt><dd id="host-key-target">--</dd></div>
+            <div><dt data-i18n-zh="密钥类型" data-i18n-en="Key type">密钥类型</dt><dd id="host-key-type">--</dd></div>
+            <div id="host-key-expected-row" hidden><dt data-i18n-zh="之前的指纹" data-i18n-en="Previous fingerprint">之前的指纹</dt><dd id="host-key-expected-fingerprint">--</dd></div>
+            <div><dt data-i18n-zh="SHA-256 指纹" data-i18n-en="SHA-256 fingerprint">SHA-256 指纹</dt><dd id="host-key-fingerprint">--</dd></div>
+          </dl>
+          <label class="trust-check">
+            <input id="remember-host-key" type="checkbox" checked />
+            <span id="remember-host-key-label">下次记住并验证此指纹</span>
+          </label>
+          <div class="dialog-actions">
+            <button id="reject-host-key" class="secondary-button" value="reject" type="submit" data-i18n-zh="取消连接" data-i18n-en="Cancel">取消连接</button>
+            <button id="accept-host-key" class="primary-button" value="accept" type="submit">信任并继续</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="process-kill-dialog" class="process-kill-dialog" aria-labelledby="process-kill-title">
+        <form method="dialog">
+          <span class="dialog-icon" aria-hidden="true">!</span>
+          <div>
+            <p class="eyebrow" data-i18n-zh="危险操作" data-i18n-en="Destructive action">危险操作</p>
+            <h2 id="process-kill-title" data-i18n-zh="确认结束进程？" data-i18n-en="Terminate process?">确认结束进程？</h2>
+            <p id="process-kill-description" data-i18n-zh="将通过 SSH 向远端主机发送 SIGTERM 信号。该操作不可撤销。" data-i18n-en="This will send a SIGTERM signal to the remote process via SSH. This action cannot be undone.">将通过 SSH 向远端主机发送 SIGTERM 信号。该操作不可撤销。</p>
+          </div>
+          <dl>
+            <div><dt data-i18n-zh="PID" data-i18n-en="PID">PID</dt><dd id="process-kill-target-pid">--</dd></div>
+            <div><dt data-i18n-zh="命令" data-i18n-en="Command">命令</dt><dd id="process-kill-target-command" class="process-kill-command">--</dd></div>
+          </dl>
+          <div id="process-kill-result" class="process-kill-result" role="status" aria-live="polite" hidden></div>
+          <div class="dialog-actions">
+            <button id="reject-process-kill" class="secondary-button" value="reject" type="submit" data-i18n-zh="取消" data-i18n-en="Cancel">取消</button>
+            <button id="confirm-process-kill" class="primary-button is-danger" value="confirm" type="submit" data-i18n-zh="确定结束" data-i18n-en="Terminate">确定结束</button>
+          </div>
+        </form>
+      </dialog>
+    </div>
+  </body>
+</html>

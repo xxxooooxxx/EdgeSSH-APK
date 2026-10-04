@@ -1,0 +1,92 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      admin_email:
+        description: Cloudflare 模式的管理员邮箱（也可保存为 ADMIN_EMAIL 变量；GitHub 模式不填）
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      admin_email:
+        description: Cloudflare 模式的管理员邮箱
+        required: false
+        type: string
+      deployment_ref:
+        description: 需要检出并部署的提交 SHA
+        required: false
+        type: string
+      deploy_preview:
+        description: 是否同时部署预览 Worker
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      AUTH_PROVIDER: ${{ vars.AUTH_PROVIDER || 'cloudflare' }}
+      GH_CLIENT_ID: ${{ vars.GH_CLIENT_ID }}
+      GH_CLIENT_SECRET: ${{ secrets.GH_CLIENT_SECRET }}
+      GH_ADMIN: ${{ vars.GH_ADMIN }}
+      GH_ADMIN_ID: ${{ vars.GH_ADMIN_ID }}
+      ADMIN_EMAIL: ${{ inputs.admin_email || secrets.ADMIN_EMAIL || vars.ADMIN_EMAIL }}
+      ACCESS_IDP_IDS: ${{ vars.ACCESS_IDP_IDS }}
+      WORKER_NAME: ${{ vars.WORKER_NAME }}
+      D1_DATABASE_NAME: ${{ vars.D1_DATABASE_NAME }}
+      D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+      # 域名本身不是敏感信息，推荐使用 Variable；同时兼容已将它保存为 Secret 的仓库。
+      CUSTOM_DOMAIN: ${{ secrets.CUSTOM_DOMAIN || vars.CUSTOM_DOMAIN }}
+      PREVIEW_DOMAIN: ${{ vars.PREVIEW_DOMAIN }}
+      DEPLOY_PREVIEW_WORKER: ${{ inputs.deploy_preview && 'true' || 'false' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          # 强制更新通过可复用工作流传入目标提交，避免推送后仍部署触发任务的旧版本。
+          ref: ${{ inputs.deployment_ref || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 本地格式先校验；账户发现与远端资源配置在检查通过后执行。
+      - name: Validate deployment settings
+        run: npm run deploy:validate
+        env:
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+
+      - name: Check project
+        run: npm run check
+
+      # 在模拟协议上回归共享文件组件，防止页面改动破坏终端侧栏或误操作真实主机。
+      - name: Check file manager in desktop and mobile browsers
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:browser -- --workers=2
+
+      - name: Configure selected login, provision D1, migrate and deploy Worker
+        run: npm run deploy
+        env:
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}

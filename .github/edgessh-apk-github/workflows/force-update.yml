@@ -1,0 +1,84 @@
+name: Force Update
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: upstream-auto-update
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  OFFICIAL_REPOSITORY: aozorae/EdgeSSH
+  OFFICIAL_BRANCH: main
+
+jobs:
+  update:
+    name: Check official release markers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      target_sha: ${{ steps.update.outputs.target_sha }}
+      updated: ${{ steps.update.outputs.updated }}
+    steps:
+      - name: Check out user repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Find marked commit and update main
+        id: update
+        shell: bash
+        run: |
+          git remote add official "https://github.com/${OFFICIAL_REPOSITORY}.git"
+          git fetch --no-tags official "${OFFICIAL_BRANCH}"
+
+          current_sha="$(git rev-parse refs/remotes/origin/main)"
+          official_sha="$(git rev-parse "refs/remotes/official/${OFFICIAL_BRANCH}")"
+          target_sha=""
+
+          # rev-list 按拓扑从新到旧扫描，只接受完整 Git trailer，防止正文中的同名文字误触发更新。
+          while read -r sha; do
+            marker="$(git show -s --format='%(trailers:key=EdgeSSH-Auto-Update,valueonly,unfold)' "${sha}")"
+            if [[ "${marker}" == "true" ]]; then
+              target_sha="${sha}"
+              break
+            fi
+          done < <(git rev-list --topo-order "refs/remotes/official/${OFFICIAL_BRANCH}" --not "${current_sha}")
+
+          if [[ -z "${target_sha}" ]]; then
+            echo "updated=false" >> "${GITHUB_OUTPUT}"
+            {
+              echo "## Force Update"
+              echo
+              echo "No commit marked \`EdgeSSH-Auto-Update: true\` exists between \`${current_sha}\` and \`${official_sha}\`."
+            } >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+
+          # lease 保证检测期间 main 若被人工更新则停止，不覆盖刚产生的新提交；下次定时任务会重新计算。
+          git push origin "${target_sha}:refs/heads/main" \
+            --force-with-lease="refs/heads/main:${current_sha}"
+
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+          echo "updated=true" >> "${GITHUB_OUTPUT}"
+          {
+            echo "## Force Update"
+            echo
+            echo "Updated \`main\` from \`${current_sha}\` to marked commit \`${target_sha}\`."
+            echo "The deployment job will deploy that exact commit in this run."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  deploy:
+    name: Deploy marked commit
+    needs: update
+    if: needs.update.outputs.updated == 'true'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      deployment_ref: ${{ needs.update.outputs.target_sha }}
+    secrets: inherit
